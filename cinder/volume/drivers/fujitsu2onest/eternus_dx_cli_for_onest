@@ -1,0 +1,58 @@
+#!/bin/bash
+# $Date:: 2015-06-26 20:52:40 +0900#$
+# $Revision: 10844 $
+# Usage: eternus_dx_cli -u <user> -l <storage_ip> -c <command_name> [ -o <option> ]
+
+function usage_error()
+{
+    echo "{'result':-1, 'rc':None, 'message':'$*'}"
+    exit 0
+}
+
+USER=""
+KEYFILE="/root/.ssh/eternus"
+IP=""
+CMD=""
+OPT=""
+PYCFILE="$(dirname $0)/eternus_dx_cli.pyc"
+
+while getopts "u:l:c:o:" OP
+do
+    case ${OP} in
+        u)
+            USER=${OPTARG}
+            ;;
+        l)
+            IP=${OPTARG}
+            ;;
+        c)
+            CMD=${OPTARG}
+            ;;
+        o)
+            OPT=${OPTARG}
+            ;;
+        *)
+            usage_error "$(basename $0) Error: Unknown option."
+            ;;
+    esac
+done
+
+if [ -z "$USER" ]; then
+    usage_error "$(basename $0) Error: UserName is not input"
+fi
+
+if [ -z "$IP" ]; then
+    usage_error "$(basename $0) Error: StorageIP is not input"
+fi
+
+if [ -z "$CMD" ]; then
+    usage_error "$(basename $0) Error: SubCommnad is not input"
+fi
+
+if [ -z "$OPT" ]; then
+    /usr/bin/python ${PYCFILE} "$USER" "$KEYFILE" "$IP" "$CMD"
+else
+    /usr/bin/python ${PYCFILE} "$USER" "$KEYFILE" "$IP" "$CMD" "$OPT"
+fi
+
+exit 0
