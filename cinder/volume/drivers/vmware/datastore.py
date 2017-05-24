@@ -278,7 +278,15 @@ class DatastoreSelector(object):
         return is_compliant
 
     def verify_datastore(self, datastore_name, size_gbytes, hosts = None):
-        # (awcloud-xuao) considering that not exist or no free capacity
+        """(aw-xuao) Verify the volume can be created in selected datastore.
+
+        Veriry that the datastore selected is existing and have enough space
+        to create the volume.
+
+        :param datastore_name: String value of the selected datastore name.
+        :param size_gbytes: Size of the volume in GB unit.
+        :param hosts: Reference of the host
+        """
         if hosts is None:
             hosts = self._get_all_hosts()
         for host in hosts:

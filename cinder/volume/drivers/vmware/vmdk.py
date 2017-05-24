@@ -230,16 +230,6 @@ class VMwareEsxVmdkDriver(driver.VolumeDriver):
                                                  password, api_retry_count,
                                                  task_poll_interval,
                                                  wsdl_loc=wsdl_loc)
-            LOG.debug("xuao session: "
-                      "ip : %(ip)s;"
-                      "username : %(usernm)s;"
-                      "password : %(passwd)s;"
-                      "api_retry_count : %(retry)s;"
-                      "task_pool_interval : %(interval)s;"
-                      "wsdl_loc : %(wsdl_loc)s", {'ip':ip, 'usernm':username,
-                                                  'retry':api_retry_count,
-                                                  'interval':task_poll_interval,
-                                                  'wsdl_loc':wsdl_loc})
         return self._session
 
     @property
@@ -333,7 +323,7 @@ class VMwareEsxVmdkDriver(driver.VolumeDriver):
 
         :param volume: Volume object
         """
-        # (awcloud-xuao)
+        # (aw-xuao) Fetch the datastore name defined in metadata.
         datastore_name = None
         for meta in volume.volume_metadata:
             if meta.key == 'datastore':
@@ -545,7 +535,7 @@ class VMwareEsxVmdkDriver(driver.VolumeDriver):
         :return: Reference to the created backing
         """
         create_params = create_params or {}
-        # (awcloud-xuao) Fetch the `datastore` in metadata, than creating bacing
+        # (aw-xuao) Fetch the datastore name in metadata, than creating bacing
         # in the specified datastore.
         ds_name = None
         for meta in volume.volume_metadata:
