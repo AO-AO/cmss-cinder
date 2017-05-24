@@ -276,3 +276,37 @@ class DatastoreSelector(object):
                    'datastore': datastore,
                    'profile': profile_name})
         return is_compliant
+
+    def verify_datastore(self, datastore_name, size_gbytes, hosts = None):
+        # (awcloud-xuao) considering that not exist or no free capacity
+        if hosts is None:
+            hosts = self._get_all_hosts()
+        for host in hosts:
+            try:
+                (datastores, rp) = self._vops.get_dss_rp(host)
+            except exceptions.VimConnectionException:
+                # No need to try other hosts when there is a connection problem
+                with excutils.save_and_reraise_exception():
+                    LOG.exception(_LE("Error occurred while "
+                                      "selecting datastore."))
+            except exceptions.VimException:
+                # TODO(vbala) volumeops.get_dss_rp shouldn't throw VimException
+                # for empty datastore list.
+                LOG.warn(_LW("Unable to fetch datastores connected "
+                             "to host %s."), host, exc_info=True)
+                continue
+            for datastore in datastores:
+                ds_summary = self._vops.get_summary(datastore)
+                if ds_summary.name == datastore_name:
+                    if ds_summary.freeSpace > size_gbytes * 1024 * 1024 * 1024:
+                        return (host, ds_summary.name, rp)
+                    else:
+                        msg = _LE("Not enough free space in %s, "
+                                  "free :%d G, required: %d G") % \
+                                  (ds_summary.name,
+                                   ds_summary.freeSpace / 1024 / 1024 / 1024,
+                                   size_gbytes)
+                        LOG.warn(msg)
+        msg = _LE("The specified datastore %s is not existent.") % datastore_name
+        LOG.error(msg)
+        raise vmdk_exceptions.NoValidDatastoreException(msg)

@@ -230,6 +230,16 @@ class VMwareEsxVmdkDriver(driver.VolumeDriver):
                                                  password, api_retry_count,
                                                  task_poll_interval,
                                                  wsdl_loc=wsdl_loc)
+            LOG.debug("xuao session: "
+                      "ip : %(ip)s;"
+                      "username : %(usernm)s;"
+                      "password : %(passwd)s;"
+                      "api_retry_count : %(retry)s;"
+                      "task_pool_interval : %(interval)s;"
+                      "wsdl_loc : %(wsdl_loc)s", {'ip':ip, 'usernm':username,
+                                                  'retry':api_retry_count,
+                                                  'interval':task_poll_interval,
+                                                  'wsdl_loc':wsdl_loc})
         return self._session
 
     @property
@@ -323,7 +333,16 @@ class VMwareEsxVmdkDriver(driver.VolumeDriver):
 
         :param volume: Volume object
         """
-        self._verify_volume_creation(volume)
+        # (awcloud-xuao)
+        datastore_name = None
+        for meta in volume.volume_metadata:
+            if meta.key == 'datastore':
+                datastore_name = meta.value
+                break
+        if datastore_name:
+            self.ds_sel.verify_datastore(datastore_name, volume.size)
+        else:
+            self._verify_volume_creation(volume)
 
     def _delete_volume(self, volume):
         """Delete the volume backing if it is present.
@@ -526,8 +545,24 @@ class VMwareEsxVmdkDriver(driver.VolumeDriver):
         :return: Reference to the created backing
         """
         create_params = create_params or {}
-        (host_ref, resource_pool, folder,
-         summary) = self._select_ds_for_volume(volume, host)
+        # (awcloud-xuao) Fetch the `datastore` in metadata, than creating bacing
+        # in the specified datastore.
+        ds_name = None
+        for meta in volume.volume_metadata:
+            if meta.key == 'datastore':
+                ds_name = meta.value
+                break
+        if ds_name:
+            hosts = [host]
+            (host_ref,
+             ds_name,
+             resource_pool) = self.ds_sel.verify_datastore(ds_name, volume.size, hosts)
+            dc = self.volumeops.get_dc(resource_pool)
+            folder = self._get_volume_group_folder(dc)
+        else:
+            (host_ref, resource_pool, folder,
+             summary) = self._select_ds_for_volume(volume, host)
+            ds_name = summary.name
 
         # check if a storage profile needs to be associated with the backing VM
         profile_id = self._get_storage_profile_id(volume)
@@ -545,7 +580,7 @@ class VMwareEsxVmdkDriver(driver.VolumeDriver):
                                                            folder,
                                                            resource_pool,
                                                            host_ref,
-                                                           summary.name,
+                                                           ds_name,
                                                            profile_id)
 
         # create a backing with single disk
@@ -559,7 +594,7 @@ class VMwareEsxVmdkDriver(driver.VolumeDriver):
                                              folder,
                                              resource_pool,
                                              host_ref,
-                                             summary.name,
+                                             ds_name,
                                              profile_id,
                                              adapter_type)
 
